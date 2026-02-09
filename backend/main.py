@@ -1,9 +1,8 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from fastapi.responses import Response
-
-from backend.controllers.conveyors import Conveyors
-from backend.controllers.pos import POSRequest
+from fastapi.responses import JSONResponse
+from controllers.conveyors import Conveyors
+from controllers.pos import POSRequest
 from models import models
 from models import schemas
 from models.database import engine, SessionLocal
@@ -20,10 +19,10 @@ def get_db():
         db.close()
 
 
-@app.get("/products")
+@app.get("/products", response_model=list[schemas.ProductResponse])
 def get_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
-    return Response(products, 200)
+    return JSONResponse(products, 200)
 
 
 @app.post("/buy")
@@ -54,18 +53,45 @@ def buy_product(item: schemas.BuyProduct, db: Session = Depends(get_db)):
         conveyor.move_elevators_conveyor()
         conveyor.move_elevator("start")
 
-        return Response({"result": "success"}, 200)
+        return JSONResponse({"result": "success"}, 200)
 
-    return Response({"error": "failed"}, 400)
+    return JSONResponse({"error": "failed"}, 400)
 
 
 @app.post("/add-product")
-def add_product(db: Session = Depends(get_db)):
-    product = models.Product()
-    return Response(product, 201)
+def add_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
+    db_product = models.Product(
+        name=product.name,
+        description=product.description,
+        cover=product.cover,
+        price=product.price,
+        quantity=product.quantity,
+        stepper_id=product.stepper_id,
+        step_count=product.step_count,
+        floor_id=product.floor_id,
+    )
+
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+
+    return JSONResponse(db_product, 201)
 
 
-@app.post("/update-product")
-def update_product(db: Session = Depends(get_db)):
-    product = models.Product()
-    return Response(product, 200)
+@app.post("/update-product/{product_id}")
+def update_product(product_id: int, product: schemas.ProductUpdate, db: Session = Depends(get_db)):
+    db_product = db.query(models.Product).filter(models.Product.id == product_id).first()
+
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Update only provided fields
+    update_data = product.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(db_product, field, value)
+
+    db.commit()
+    db.refresh(db_product)
+    return JSONResponse(product, 200)
+
