@@ -3,48 +3,190 @@
 <head>
   <meta charset="UTF-8">
   <title>محصولات</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* -------- Base -------- */
+    body {
+      background: #f3f4f6;
+      padding: 24px;
+      font-family: sans-serif;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    /* -------- Grid -------- */
+    .products {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 24px;
+    }
+
+    @media (min-width: 640px) {
+      .products { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 768px) {
+      .products { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (min-width: 1024px) {
+      .products { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    /* -------- Card -------- */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+
+    .no-image {
+      height: 160px;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .card-body h2 {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .card-body p {
+      font-size: 14px;
+      color: #4b5563;
+      margin-bottom: 12px;
+    }
+
+    .card-footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .price {
+      font-weight: bold;
+      color: #4f46e5;
+    }
+
+    /* -------- Button -------- */
+    .buy-btn {
+      background: #4f46e5;
+      color: #fff;
+      padding: 8px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .buy-btn:hover {
+      background: #4338ca;
+    }
+
+    .buy-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* -------- Waiting Dialog -------- */
+    .waiting {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .waiting.show {
+      display: flex;
+    }
+
+    .waiting-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 320px;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #4f46e5;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .waiting-text {
+      font-weight: bold;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100 p-6">
+<body>
 
-<h1 class="text-2xl font-bold mb-8 text-center">
-  محصولات
-</h1>
+<h1>محصولات</h1>
 
-<div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+<div class="products">
 
   {% for p in products %}
-  <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col">
+  <div class="card">
 
     {% if p.cover %}
-      <img
-  src="{{ url_for('static', path=p.cover) }}"
-  class="w-full h-40 object-cover"
-  alt="{{ p.name }}"
->
-
+      <img src="{{ url_for('static', path=p.cover) }}" alt="{{ p.name }}">
     {% else %}
-      <div class="h-40 bg-gray-200 flex items-center justify-center">
-        بدون تصویر
-      </div>
+      <div class="no-image">بدون تصویر</div>
     {% endif %}
 
-    <div class="p-4 flex flex-col flex-1">
-      <h2 class="font-bold text-lg mb-1">{{ p.name }}</h2>
+    <div class="card-body">
+      <h2>{{ p.name }}</h2>
 
-      <p class="text-sm text-gray-600 mb-3">
-        {{ p.description or "—" }}
-      </p>
+      <p>{{ p.description or "—" }}</p>
 
-      <div class="mt-auto flex justify-between items-center">
-        <span class="font-bold text-indigo-600">
+      <div class="card-footer">
+        <span class="price">
           {{ "{:,}".format(p.price) }} تومان
         </span>
 
         <button
-          onclick="buyProduct({{ p.id }}, this)"
-          class="bg-indigo-600 hover:bg-indigo-700 items-center justify-center text-white px-4 py-2 rounded-lg">
+          class="buy-btn"
+          onclick="buyProduct({{ p.id }}, this)">
           خرید
         </button>
       </div>
@@ -55,38 +197,28 @@
 </div>
 
 <!-- Waiting Dialog -->
-<div id="waitingDialog"
-     class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50">
-
-  <div class="bg-white rounded-xl p-6 w-80 text-center">
-    <!-- Spinner -->
-    <div class="flex justify-center mb-4">
-      <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-
-    <p id="waitingText" class="font-bold">
+<div id="waitingDialog" class="waiting">
+  <div class="waiting-box">
+    <div class="spinner"></div>
+    <p id="waitingText" class="waiting-text">
       لطفاً مبلغ را در دستگاه کارت‌خوان پرداخت کنید
     </p>
   </div>
-
 </div>
 
 <script>
   function showWaiting(text) {
     document.getElementById("waitingText").innerText = text;
-    document.getElementById("waitingDialog").classList.remove("hidden");
-    document.getElementById("waitingDialog").classList.add("flex");
+    document.getElementById("waitingDialog").classList.add("show");
   }
 
   function hideWaiting() {
-    document.getElementById("waitingDialog").classList.add("hidden");
-    document.getElementById("waitingDialog").classList.remove("flex");
+    document.getElementById("waitingDialog").classList.remove("show");
   }
 
   async function buyProduct(productId, button) {
-    // Prevent double-click
     button.disabled = true;
-    button.classList.add("opacity-50", "cursor-not-allowed");
+    button.classList.add("disabled");
 
     showWaiting("لطفاً مبلغ را در دستگاه کارت‌خوان پرداخت کنید");
 
@@ -97,8 +229,6 @@
         body: JSON.stringify({ id: productId })
       });
 
-      const data = await res.json();
-
       if (res.ok) {
         showWaiting("✅ پرداخت با موفقیت انجام شد");
         setTimeout(hideWaiting, 1500);
@@ -106,13 +236,12 @@
         showWaiting("❌ پرداخت ناموفق بود");
         setTimeout(hideWaiting, 2000);
       }
-
-    } catch (err) {
+    } catch {
       showWaiting("❌ خطا در ارتباط با سرور");
       setTimeout(hideWaiting, 2000);
     } finally {
       button.disabled = false;
-      button.classList.remove("opacity-50", "cursor-not-allowed");
+      button.classList.remove("disabled");
     }
   }
 </script>
