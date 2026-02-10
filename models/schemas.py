@@ -10,6 +10,7 @@ class ProductCreate(BaseModel):
     cover: str | None = None
     price: int
     quantity: int
+    active: bool
     stepper_id: int
     step_count: int
     floor_id: int
@@ -20,6 +21,7 @@ class ProductUpdate(BaseModel):
     cover: str | None = None
     price: int | None = None
     quantity: int | None = None
+    active: bool | None = None
     stepper_id: int | None = None
     step_count: int | None = None
     floor_id: int | None = None

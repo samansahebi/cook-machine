@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from .database import Base
 
 
@@ -12,6 +12,7 @@ class Product(Base):
     cover = Column(String)
     price = Column(Integer)
     quantity = Column(Integer)
+    active = Column(Boolean, default=True)
     stepper_id = Column(Integer, index=True)
     step_count = Column(Integer)
     floor_id = Column(Integer, index=True)

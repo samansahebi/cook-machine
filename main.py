@@ -6,10 +6,21 @@ from controllers.pos import POSRequest
 from models import models
 from models import schemas
 from models.database import engine, SessionLocal
+from fastapi.templating import Jinja2Templates
+from fastapi.requests import Request
+from sqladmin import Admin
+from models.admin import ProductAdmin, TransactionAdmin
+from fastapi.staticfiles import StaticFiles
+
 
 models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI()
+admin = Admin(app, engine)
+admin.add_view(ProductAdmin)
+admin.add_view(TransactionAdmin)
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 def get_db():
     db = SessionLocal()
@@ -19,15 +30,27 @@ def get_db():
         db.close()
 
 
+@app.get("/", include_in_schema=False)
+def products_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    products = db.query(models.Product).all()
+    return templates.TemplateResponse(
+        "products.html",
+        {"request": request, "products": products}
+    )
+
+
 @app.get("/products", response_model=list[schemas.ProductResponse])
 def get_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
-    return JSONResponse(products, 200)
+    return products
 
 
 @app.post("/buy")
 def buy_product(item: schemas.BuyProduct, db: Session = Depends(get_db)):
-    product = models.Product(id=item.id)
+    product = db.query(models.Product).filter(models.Product.id == item.id).first()
     pos = POSRequest()
     res = pos.send_request(product.price)
     if res.get("resp") == 0:
@@ -58,27 +81,18 @@ def buy_product(item: schemas.BuyProduct, db: Session = Depends(get_db)):
     return JSONResponse({"error": "failed"}, 400)
 
 
-@app.post("/add-product")
+@app.post("/add-product", response_model=schemas.ProductResponse)
 def add_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
-    db_product = models.Product(
-        name=product.name,
-        description=product.description,
-        cover=product.cover,
-        price=product.price,
-        quantity=product.quantity,
-        stepper_id=product.stepper_id,
-        step_count=product.step_count,
-        floor_id=product.floor_id,
-    )
+    db_product = models.Product(**product.dict())
 
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
 
-    return JSONResponse(db_product, 201)
+    return db_product
 
 
-@app.post("/update-product/{product_id}")
+@app.post("/update-product/{product_id}", response_model=schemas.ProductResponse)
 def update_product(product_id: int, product: schemas.ProductUpdate, db: Session = Depends(get_db)):
     db_product = db.query(models.Product).filter(models.Product.id == product_id).first()
 
@@ -93,5 +107,5 @@ def update_product(product_id: int, product: schemas.ProductUpdate, db: Session 
 
     db.commit()
     db.refresh(db_product)
-    return JSONResponse(product, 200)
+    return db_product
 

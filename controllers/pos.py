@@ -23,18 +23,15 @@ class POSRequest:
         length = f"{len(json_bytes):04d}".encode('ascii')
         payload = length + json_bytes
 
-        print("SEND:", payload)
-
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        sock.settimeout(10)
+        sock.settimeout(30)
         sock.connect((self.ip, self.port))
         sock.sendall(payload)
 
         try:
             resp_bytes = sock.recv(4096)
             length = int(resp_bytes[:4].decode('ascii'))
-
             json_bytes = resp_bytes[4:4 + length]
             data = json.loads(json_bytes.decode('utf-8'))
             sock.close()
